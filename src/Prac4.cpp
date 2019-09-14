@@ -23,22 +23,26 @@ long lastInterruptTime =0;
 // Don't forget to use debouncing.
 void play_pause_isr(void){
 	long interruptTime = millis();
-	printf("play\n");
 	if ((interruptTime-lastInterruptTime)>200){
-		playing = !playing;
-		lastInterruptTime = interruptTime;
+		if(playing ==true){
+			playing = false;
+			printf("Paused\n");
+		}else{
+			playing = true;
+			printf("Playing\n");
+		}
 	}
-    //Write your logis here
+	lastInterruptTime = interruptTime;
 }
 
 void stop_isr(void){
-    // Write your logic here
 	long interruptTime = millis();
-	printf("stop\n");
-		if ((interruptTime-lastInterruptTime)>200){
-			stopped = true;
-			lastInterruptTime = interruptTime;
-		}
+	if ((interruptTime-lastInterruptTime)>200){
+		stopped = true;
+		printf("Stopped\n");
+	}
+	lastInterruptTime = interruptTime;
+
 }
 
 /*
@@ -50,10 +54,10 @@ int setup_gpio(void){
     //setting up the buttons
 	pinMode(PLAY_BUTTON,INPUT);
 	pullUpDnControl(PLAY_BUTTON,PUD_UP);
-	wiringPiISR(PLAY_BUTTON,INT_EDGE_RISING, &play_pause_isr);
+	wiringPiISR(PLAY_BUTTON,INT_EDGE_FALLING, play_pause_isr);
 	pinMode(STOP_BUTTON,INPUT);
 	pullUpDnControl(STOP_BUTTON,PUD_UP);
-	wiringPiISR(STOP_BUTTON,INT_EDGE_RISING, &stop_isr);
+	wiringPiISR(STOP_BUTTON,INT_EDGE_FALLING, stop_isr);
 
 
     //setting up the SPI interface
@@ -81,14 +85,12 @@ void *playThread(void *threadargs){
         
         //Write the buffer out to SPI
         if (playing==true){
-//		printf("playing");
+		//printf(".\n");
         	wiringPiSPIDataRW(SPI_CHAN, buffer[bufferReading][buffer_location], 2);
-
+        buffer_location++;
         }
 		
         //Do some maths to check if you need to toggle buffers
-        buffer_location++;
-//	printf("Buffer loc: %d",buffer_location);
         if(buffer_location >= BUFFER_SIZE) {
             buffer_location = 0;
             bufferReading = !bufferReading; // switches column one it finishes one column
